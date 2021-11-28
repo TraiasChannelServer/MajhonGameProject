@@ -5,6 +5,10 @@
 #include "main_flame.h"
 #include "DxLib.h"
 
+// 雨安実験コメント
+// すぐに消します
+// マスターブランチに直接pushすると
+// プルリクになるのか、無言で反映されてしまうのか
 
 const int dxLibError = -1;
 inline bool DXLibError(int result) {
