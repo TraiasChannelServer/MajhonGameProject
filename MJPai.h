@@ -2,7 +2,7 @@
 
 #include "MJLocation.h"
 
-
+//テストコメント
 
 
 namespace shig {
