@@ -5,7 +5,6 @@
 #include "main_flame.h"
 #include "DxLib.h"
 
-// 雨安実験コメントすぐ消します
 
 const int dxLibError = -1;
 inline bool DXLibError(int result) {
