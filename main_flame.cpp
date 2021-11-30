@@ -6,95 +6,97 @@
 #include "DxLib.h"
 
 
+// ウィンドウ出現時の初期サイズ
+static constexpr int INIT_WINDOW_CLIENT_X_SIZE = 1280;
+static constexpr int INIT_WINDOW_CLIENT_Y_SIZE = 720;
+
 const int dxLibError = -1;
 inline bool DXLibError(int result) {
-	return result == dxLibError ? true : false;
+    return result == dxLibError ? true : false;
 }
 
-struct Size {
-	int width, height;
-};
+// DXライブラリのウィンドウメッセージ処理をフックする関数
+static LRESULT CALLBACK WndProcHook(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_MOVE:
+    {
+        // 以下自作スナップ処理の記述
+        // スナップとは？(https://win10-navi.com/snap/)
 
-class Window {
-    HWND windowHandle = NULL;
-    MSG message = {};
-public:
+        // デスクトップ画面の領域範囲を取得
+        RECT r;
+        GetClientRect(GetDesktopWindow(), &r);
 
-    // ウィンドウプロシージャ
-    static LRESULT CALLBACK Procedure(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) {
-        switch (message) {
-            // 一応終了処理だけ
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;
+        // ウィンドウの比率を維持したまま
+        // 画面の1/4の大きさになるように調整
+        int w = r.right - r.left;
+        int h = r.bottom - r.top;
+        if (INIT_WINDOW_CLIENT_X_SIZE > INIT_WINDOW_CLIENT_Y_SIZE) {
+            w /= 2;
+            h = w * INIT_WINDOW_CLIENT_Y_SIZE / INIT_WINDOW_CLIENT_X_SIZE;
+        } else {
+            h /= 2;
+            w = h * INIT_WINDOW_CLIENT_X_SIZE / INIT_WINDOW_CLIENT_Y_SIZE;
         }
-        return DefWindowProc(handle, message, wParam, lParam);
-    }
 
-    // ウィンドウハンドルを取得する
-    HWND GetHandle() {
-        return windowHandle;
-    }
+        // スナップ処理が発動するマウス座標の画面端判定範囲に余裕を持たせる
+        static constexpr int padding = 50;
 
-    // ウィンドウを生成する
-    void Create(std::string title, std::string className) {
-        // クラス情報を登録する
-        WNDCLASS windowClass = {};
-        windowClass.lpfnWndProc = Procedure;
-        windowClass.hInstance = GetModuleHandle(NULL);
-        windowClass.lpszClassName = className.c_str();
-        windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-        RegisterClass(&windowClass);
-        // ウィンドウを生成する
-        windowHandle = CreateWindowEx(0, className.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW, 50, 50, 1280, 720, NULL, NULL, GetModuleHandle(NULL), NULL);
+        POINT p = {};
+        GetCursorPos(&p);
 
-    }
-
-    // ウィンドウのサイズを取得する
-    Size GetSize() {
-        Size result;
-        GetWindowSize(&result.width, &result.height);
-        return result;
-    }
-
-    // メッセージ処理
-    bool Loop() {
-        while (true) {
-            if (message.message == WM_QUIT) return false;
-            if (PeekMessage(&message, NULL, 0, 0, PM_REMOVE)) {
-                TranslateMessage(&message);
-                DispatchMessage(&message);
-            }
-            else return true;
+        // 左上
+        if (p.x <= r.left + padding && p.y <= r.top + padding)
+        {
+            SetWindowPosition(r.left, r.top);
+            SetWindowSize(w, h);
+        }
+        // 左下
+        if (p.x <= r.left + padding && p.y >= r.bottom - padding)
+        {
+            SetWindowPosition(r.left, r.bottom - h);
+            SetWindowSize(w, h);
+        }
+        // 右上
+        if (p.x >= r.right - padding && p.y <= r.top + padding)
+        {
+            SetWindowPosition(r.right - w, r.top);
+            SetWindowSize(w, h);
+        }
+        // 右下
+        if (p.x >= r.right - padding && p.y >= r.bottom - padding)
+        {
+            SetWindowPosition(r.right - w, r.bottom - h);
+            SetWindowSize(w, h);
         }
     }
-
-    // ウィンドウを表示する
-    void Show() {
-        ShowWindow(windowHandle, SW_SHOW);
+    break;
     }
-};
+    return 0;
+}
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-	LPSTR lpCmdLine, int nCmdShow)
+    LPSTR lpCmdLine, int nCmdShow)
 {
-    Window MYwindow;
-    MYwindow.Create("MahjongGameProject_v999.0.1", "DXlib");
-    SetUserWindow(MYwindow.GetHandle());
-    SetUserWindowMessageProcessDXLibFlag(false);
-    SetGraphMode(1280, 720, 32);
+    SetGraphMode(INIT_WINDOW_CLIENT_X_SIZE, INIT_WINDOW_CLIENT_Y_SIZE, 32);
+    ChangeWindowMode(TRUE);
+    SetWindowSizeChangeEnableFlag(TRUE);
+    SetHookWinProc(WndProcHook);
+
     if (DXLibError(DxLib_Init())) return dxLibError;
-    MYwindow.Show();
 
     // file loading
 
+    SetDrawScreen(DX_SCREEN_BACK);
     DxLib::SetMouseDispFlag(TRUE);
     DxLib::SetBackgroundColor(0, 0, 0);
 
 
-    while (MYwindow.Loop()) {
-        
+    while (ProcessMessage() == 0) {
+
+        ClearDrawScreen();
+
         unsigned int color = GetColor(255, 255, 255);
         DrawFormatString(0, 0, color, "%s", "MJP_test");
 
@@ -102,14 +104,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             break;
         }
 
+        ScreenFlip();
     }
 
-	
-	
 
-	//WaitKey();					// キーの入力待ち((7-3)『WaitKey』を使用)
+
+
+    //WaitKey();					// キーの入力待ち((7-3)『WaitKey』を使用)
 
     DxLib::DxLib_End();			// ＤＸライブラリ使用の終了処理
 
-	return 0;					// ソフトの終了
+    return 0;					// ソフトの終了
 }
