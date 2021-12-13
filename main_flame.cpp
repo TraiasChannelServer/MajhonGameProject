@@ -15,41 +15,25 @@ inline bool DXLibError(int result) {
     return result == dxLibError ? true : false;
 }
 
+// 全モニターのRECTを格納する
+static std::vector<RECT> g_monRects;
+
 // 全モニターのRECTを取得するためのコールバック関数
-BOOL monitorenumproc(HMONITOR hMon, HDC hMonDC, LPRECT lpMonRect, LPARAM monRects) {
-    ((std::vector<RECT>*)monRects)->push_back(*lpMonRect);
+BOOL monitorenumproc(HMONITOR hMon, HDC hMonDC, LPRECT lpMonRect, LPARAM dwData) {
+    g_monRects.push_back(*lpMonRect);
     return TRUE;
 }
 
 // DXライブラリのウィンドウメッセージ処理をフックする関数
 static LRESULT CALLBACK WndProcHook(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) {
-    // 全モニターのRECTを格納する
-    static std::vector<RECT> s_monRects;
-
-    // ウィンドウサイズとクライアントサイズの差
-    static RECT s_dRect = {};
-
     switch (message) {
-    case WM_CREATE:
-    {
-        // 全モニターのRECTを取得する
-        EnumDisplayMonitors(NULL, NULL, monitorenumproc, (LPARAM)(&s_monRects));
-
-        // ウィンドウサイズとクライアントサイズの差を計算
-        DWORD style = (DWORD)GetWindowLong(handle, GWL_STYLE);
-        s_dRect = { 0 , 0, INIT_WINDOW_CLIENT_X_SIZE, INIT_WINDOW_CLIENT_Y_SIZE };
-        AdjustWindowRect(&s_dRect, style, FALSE);
-        s_dRect.right -= INIT_WINDOW_CLIENT_X_SIZE;
-        s_dRect.bottom -= INIT_WINDOW_CLIENT_Y_SIZE;
-    }
-    break;
     case WM_MOVE:
     {
         // 以下自作スナップ処理の記述
         // スナップとは？(https://win10-navi.com/snap/)
 
         // 各モニターのRECTでループ
-        for (auto& r : s_monRects)
+        for (auto& r : g_monRects)
         {
             POINT p = {};
             GetCursorPos(&p);
@@ -62,14 +46,12 @@ static LRESULT CALLBACK WndProcHook(HWND handle, UINT message, WPARAM wParam, LP
             // 画面の1/4の大きさになるように調整
             int w = r.right - r.left;
             int h = r.bottom - r.top;
-            if (INIT_WINDOW_CLIENT_X_SIZE < (INIT_WINDOW_CLIENT_Y_SIZE + (s_dRect.bottom - s_dRect.top))) {
-                // -2 の理由は、横幅が左に1px右に1pxなぜかはみ出すのでそれの調整
-                w = (w / 2) - 2;
+            if (INIT_WINDOW_CLIENT_X_SIZE > INIT_WINDOW_CLIENT_Y_SIZE) {
+                w /= 2;
                 h = w * INIT_WINDOW_CLIENT_Y_SIZE / INIT_WINDOW_CLIENT_X_SIZE;
             }
             else {
-                // (s_dRect.bottom - s_dRect.top)は、ほぼタイトルバーのサイズを表す
-                h = (h / 2) - (s_dRect.bottom - s_dRect.top);
+                h /= 2;
                 w = h * INIT_WINDOW_CLIENT_X_SIZE / INIT_WINDOW_CLIENT_Y_SIZE;
             }
 
@@ -79,26 +61,26 @@ static LRESULT CALLBACK WndProcHook(HWND handle, UINT message, WPARAM wParam, LP
             // 左上
             if (p.x <= r.left + padding && p.y <= r.top + padding)
             {
+                SetWindowPosition(r.left, r.top);
                 SetWindowSize(w, h);
-                SetWindowPosition(s_dRect.left + r.left + 1, r.top + 1);
             }
             // 左下
             if (p.x <= r.left + padding && p.y >= r.bottom - padding)
             {
+                SetWindowPosition(r.left, r.bottom - h);
                 SetWindowSize(w, h);
-                SetWindowPosition(s_dRect.left + r.left + 1, r.bottom - h - (s_dRect.bottom - s_dRect.top));
             }
             // 右上
             if (p.x >= r.right - padding && p.y <= r.top + padding)
             {
+                SetWindowPosition(r.right - w, r.top);
                 SetWindowSize(w, h);
-                SetWindowPosition(s_dRect.left + r.right - w - 1, r.top + 1);
             }
             // 右下
             if (p.x >= r.right - padding && p.y >= r.bottom - padding)
             {
+                SetWindowPosition(r.right - w, r.bottom - h);
                 SetWindowSize(w, h);
-                SetWindowPosition(s_dRect.left + r.right - w - 1, r.bottom - h - (s_dRect.bottom - s_dRect.top));
             }
         }
     }
@@ -114,6 +96,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     SetGraphMode(INIT_WINDOW_CLIENT_X_SIZE, INIT_WINDOW_CLIENT_Y_SIZE, 32);
     ChangeWindowMode(TRUE);
     SetWindowSizeChangeEnableFlag(TRUE);
+
+    // 全モニターのRECTを取得する
+    EnumDisplayMonitors(NULL, NULL, monitorenumproc, 0);
 
     // ウィンドウメッセージのフック
     SetHookWinProc(WndProcHook);
