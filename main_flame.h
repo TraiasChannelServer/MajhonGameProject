@@ -2,6 +2,8 @@
 
 #include "resource.h"
 
+#include <dwmapi.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
