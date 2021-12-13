@@ -58,28 +58,32 @@ static LRESULT CALLBACK WndProcHook(HWND handle, UINT message, WPARAM wParam, LP
             // スナップ処理が発動するマウス座標の画面端判定範囲に余裕を持たせる
             static constexpr int padding = 50;
 
+            // ウィンドウ位置調整用
+            static constexpr int adjX = -8; // 1920*1080環境での実測値
+            static constexpr int adjY = -25; // 1920*1080環境での実測値
+
             // 左上
             if (p.x <= r.left + padding && p.y <= r.top + padding)
             {
-                SetWindowPosition(r.left, r.top);
+                SetWindowPosition(r.left + adjX, r.top);
                 SetWindowSize(w, h);
             }
             // 左下
             if (p.x <= r.left + padding && p.y >= r.bottom - padding)
             {
-                SetWindowPosition(r.left, r.bottom - h);
+                SetWindowPosition(r.left + adjX, r.bottom - h + adjY);
                 SetWindowSize(w, h);
             }
             // 右上
             if (p.x >= r.right - padding && p.y <= r.top + padding)
             {
-                SetWindowPosition(r.right - w, r.top);
+                SetWindowPosition(r.right - w + adjX, r.top);
                 SetWindowSize(w, h);
             }
             // 右下
             if (p.x >= r.right - padding && p.y >= r.bottom - padding)
             {
-                SetWindowPosition(r.right - w, r.bottom - h);
+                SetWindowPosition(r.right - w + adjX, r.bottom - h + adjY);
                 SetWindowSize(w, h);
             }
         }
