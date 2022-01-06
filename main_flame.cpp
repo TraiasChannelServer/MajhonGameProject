@@ -125,21 +125,25 @@ static LRESULT CALLBACK WndProcHook(HWND handle, UINT message, WPARAM wParam, LP
         }
 
         // B.高さ基準でウィンドウサイズを計算
-        RECT bRect = {};
-        {
-            bRect.bottom = (monRect.bottom - monRect.top) / 2;                                   // 見た目の高さが画面の 1/2
-            bRect.bottom += (wndRect.bottom - wndRect.top) - (looksRect.bottom - looksRect.top); // 見た目の高さをウィンドウの高さに変換
-            bRect.bottom -= (s_wndDiffRect.bottom - s_wndDiffRect.top);                          // ウィンドウの高さをクライアントの高さに変換
-            bRect.right = bRect.bottom * INIT_WINDOW_CLIENT_X_SIZE / INIT_WINDOW_CLIENT_Y_SIZE;  // クライアントのアスペクト比を保つように幅を計算
-        }
+        //RECT bRect = {};
+        //{
+        //    bRect.bottom = (monRect.bottom - monRect.top) / 2;                                   // 見た目の高さが画面の 1/2
+        //    bRect.bottom += (wndRect.bottom - wndRect.top) - (looksRect.bottom - looksRect.top); // 見た目の高さをウィンドウの高さに変換
+        //    bRect.bottom -= (s_wndDiffRect.bottom - s_wndDiffRect.top);                          // ウィンドウの高さをクライアントの高さに変換
+        //    bRect.right = bRect.bottom * INIT_WINDOW_CLIENT_X_SIZE / INIT_WINDOW_CLIENT_Y_SIZE;  // クライアントのアスペクト比を保つように幅を計算
+        //}
 
-        RECT dstRect = {};
+        //RECT dstRect = {};
 
         // AとBの内、小さい方を選択
-        if (aRect.right <= bRect.right)
-            dstRect = aRect;
-        else
-            dstRect = bRect;
+        //if (aRect.right <= bRect.right)
+        //    dstRect = aRect;
+        //else
+        //    dstRect = bRect;
+
+        // ウィンドウを縦に並べる使い方はしないので
+        // Bはコメントアウトし、Aを選択することにした
+        RECT dstRect = aRect;
 
         // クライアントサイズをこの関数に設定する
         DxLib::SetWindowSize(dstRect.right, dstRect.bottom);
