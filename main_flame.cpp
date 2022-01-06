@@ -148,6 +148,10 @@ static LRESULT CALLBACK WndProcHook(HWND handle, UINT message, WPARAM wParam, LP
         // クライアントサイズをこの関数に設定する
         DxLib::SetWindowSize(dstRect.right, dstRect.bottom);
 
+        // ウィンドウサイズを変更したのでサイズを取得し直す
+        GetWindowRect(handle, &wndRect);
+        DwmGetWindowAttribute(handle, DWMWA_EXTENDED_FRAME_BOUNDS, &looksRect, sizeof(RECT));
+
         switch (s_doSnap)
         {
         case DoSnap::TL:
